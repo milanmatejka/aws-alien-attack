@@ -21,7 +21,7 @@ However, if you want to do it without going through the workshop, we provide her
 The back-end deployment is supported by CDK. To make the things easier - and to not affect your computer by installing tools that you migh not need, we recommend Cloud9 or another Amazon Linux instance which you can access via SSH.
 
 
-1. Be sure that your machine has the permissions in place to deploy the Cloudformation template.
+1. Be sure that your machine has the permissions in place to deploy the CloudFormation template.
 
 2. Clone the repository in the machine.
 
