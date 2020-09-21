@@ -3,7 +3,7 @@
 import { Construct, RemovalPolicy } from '@aws-cdk/core';
 import { ResourceAwareConstruct, IParameterAwareProps } from './../resourceawarestack'
 import { IBucket, Bucket, BucketProps, HttpMethods } from '@aws-cdk/aws-s3';
-
+import { WebS3Bucket } from '../construct/web-s3-bucket';
 
 interface IBucketCreationProps {
     bucketName : string,
@@ -27,67 +27,25 @@ export class StorageLayer extends ResourceAwareConstruct {
      * This function receives the desired bucket configuration
      * and then creates (or imports) the bucket
      */
-    private createBucket(props: IBucketCreationProps) : IBucket {
-        let bucket : IBucket;
+    private createBucket(props: IBucketCreationProps): IBucket {
         if (props.alreadyExists) {
-            bucket = Bucket.fromBucketArn(this, props.bucketName,'arn:aws:s3:::'+props.bucketName);      
-        } else {
-            var bucketProperties : BucketProps;
-            if (props.isWeb) {
-                if (props.retain)
-                   bucketProperties  = {
-                        bucketName : props.bucketName
-                       ,cors : [
-                           {
-                               allowedHeaders : ["*"]
-                               ,allowedMethods : [
-                                   HttpMethods.GET,
-                                   HttpMethods.PUT,
-                                   HttpMethods.DELETE,
-                                   HttpMethods.POST
-                               ] 
-                               ,allowedOrigins : ["*"]
-                           }
-                       ]
-                       ,websiteIndexDocument : 'index.html'
-                       ,websiteErrorDocument : 'error.html'
-                       ,removalPolicy : RemovalPolicy.RETAIN
-                    }                    
-                else 
-                    bucketProperties  = {
-                        bucketName : props.bucketName
-                        ,cors : [
-                            {
-                                allowedHeaders : ["*"]
-                                ,allowedMethods : [
-                                    HttpMethods.GET,
-                                    HttpMethods.PUT,
-                                    HttpMethods.DELETE,
-                                    HttpMethods.POST
-                                ] 
-                                ,allowedOrigins : ["*"]
-                            }
-                        ]
-                        ,websiteIndexDocument : 'index.html'
-                        ,websiteErrorDocument : 'error.html'
-                        ,removalPolicy : RemovalPolicy.DESTROY
-                    };
-                bucket = new Bucket(this, props.bucketName, bucketProperties );
-            } else {
-                if (props.retain) 
-                    bucketProperties =  {
-                         bucketName : props.bucketName
-                        ,removalPolicy : RemovalPolicy.RETAIN
-                    };
-                else 
-                    bucketProperties =  {
-                        bucketName : props.bucketName
-                        ,removalPolicy : RemovalPolicy.DESTROY
-                    };     
-                bucket = new Bucket(this,props.bucketName,bucketProperties);
-            }
+            return Bucket.fromBucketArn(this, props.bucketName, 'arn:aws:s3:::' + props.bucketName);
         }
-        return bucket;
+
+        if (props.isWeb) {
+            const webBucket = new WebS3Bucket(this, props.bucketName, {
+                bucketName: props.bucketName
+            });
+
+            return webBucket.bucket;
+        }
+
+        var bucketProperties: BucketProps = {
+            bucketName: props.bucketName,
+            removalPolicy: props.retain ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
+        };
+
+        return new Bucket(this, props.bucketName, bucketProperties);
     }
 
     createBuckets() {
