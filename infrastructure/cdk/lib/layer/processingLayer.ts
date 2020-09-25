@@ -10,7 +10,7 @@ import { ManagedPolicy } from '@aws-cdk/aws-iam';
 
 import SQS = require('@aws-cdk/aws-sqs');
 
-import { CfnParameter } from '@aws-cdk/aws-ssm';
+import { StringParameter } from '@aws-cdk/aws-ssm';
 
 
 const path = require('path');
@@ -70,8 +70,8 @@ export class ProcessingLayer extends ResourceAwareConstruct {
         let sessionParameter : any;
         let parameterNameForLambda : string;
         if (SESSION_PARAMETER) {
-            sessionParameter = <CfnParameter> this.properties.getParameter('parameter.session');
-            parameterNameForLambda =  <string> ( <CfnParameter> sessionParameter).name;
+            sessionParameter = <StringParameter> this.properties.getParameter('parameter.session');
+            parameterNameForLambda =  <string> ( <StringParameter> sessionParameter).parameterName;
         }
         else {
             sessionParameter = { parameterName : '/'+this.properties.getApplicationName().toLocaleLowerCase()+'/session'};
@@ -141,8 +141,8 @@ export class ProcessingLayer extends ResourceAwareConstruct {
         let sessionParameter : any;
         let parameterName : string;
         if (SESSION_PARAMETER) {
-            sessionParameter = <CfnParameter>  this.properties.getParameter('parameter.session');
-            parameterName = (<CfnParameter> sessionParameter).ref;
+            sessionParameter = <StringParameter>  this.properties.getParameter('parameter.session');
+            parameterName = (<StringParameter> sessionParameter).parameterArn;
         }
         else  {
             sessionParameter = { parameterName : '/'+this.properties.getApplicationName().toLocaleLowerCase()+'/session'};
@@ -222,8 +222,8 @@ export class ProcessingLayer extends ResourceAwareConstruct {
         let sessionParameter : any;
         let parameterName : string;
         if (SESSION_PARAMETER) {
-            sessionParameter = <CfnParameter> this.properties.getParameter('parameter.session');
-            parameterName = (<CfnParameter> sessionParameter).ref;
+            sessionParameter = <StringParameter> this.properties.getParameter('parameter.session');
+            parameterName = (<StringParameter> sessionParameter).parameterArn;
         } else {
             sessionParameter = { parameterName : '/'+this.properties.getApplicationName().toLocaleLowerCase()+'/session'};
             parameterName = sessionParameter.parameterName;

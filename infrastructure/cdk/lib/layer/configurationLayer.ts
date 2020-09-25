@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT-0
 import { Construct } from '@aws-cdk/core';
 import { ResourceAwareConstruct, IParameterAwareProps } from './../resourceawarestack'
-import ssm = require('@aws-cdk/aws-ssm');
-
+import { SSM } from '../construct/ssm';
 
 /**
  * Configuration Layer is a construct designed to acquire and store configuration
@@ -13,24 +12,23 @@ export class ConfigurationLayer extends ResourceAwareConstruct {
 
     constructor(parent: Construct, name: string, props: IParameterAwareProps) {
         super(parent, name, props);
-        if (props) {
-            let parametersToBeCreated = props.getParameter('ssmParameters');
-            if (parametersToBeCreated) {
-                parametersToBeCreated.forEach( (v : any, k : string) => {
-                    let parameter = this.createParameter(props.getApplicationName(),k,<string> v);
-                    this.addResource('parameter.'+k,parameter);
-                });
-            }
-        }
-    }       
+        if (props && props.getParameter('ssmParameters')) {
 
-    private createParameter(appName : string, keyName: string, value : string) {    
-        let baseName : string = '/'+ appName.toLowerCase();
-        let parameter = new ssm.CfnParameter(this, 'SSMParameter'+appName+keyName, {
-            name: baseName + '/'+keyName.toLowerCase(),
-            type: 'String',
-            value: value
-        });
-        return parameter;
+            const appName = props.getApplicationName()
+            const baseName = '/' + appName.toLowerCase();
+
+            const ssm = new SSM(this, '', {});
+
+            props.getParameter('ssmParameters').forEach((value: any, key: string) => {
+
+                const ssmParam = ssm.addParameter({
+                    id: 'SSMParameter' + appName + key,
+                    name: baseName + '/' + key.toLowerCase(),
+                    value: value
+                });
+
+                this.addResource('parameter.' + key, ssmParam);
+            });
+        }
     }
 }
