@@ -91,6 +91,7 @@ export class MainLayer extends ResourceAwareStack {
     ingestionConsumptionLayerProps.addParameter('lambda.scoreboard',processingLayer.getScoreboardFunctionRef());
     ingestionConsumptionLayerProps.addParameter('security.playersrole', securityLayer.getResource('security.playersrole'));
     ingestionConsumptionLayerProps.addParameter('security.managersrole', securityLayer.getResource('security.managersrole'));
+    ingestionConsumptionLayerProps.addParameter('ssm', configLayer.ssm);
     let icl = new IngestionConsumptionLayer(this, 'IngestionConsumptionLayer',ingestionConsumptionLayerProps); 
     
     new CfnOutput(this, "apigtw", {

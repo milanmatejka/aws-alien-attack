@@ -10,6 +10,8 @@ import { SSM } from '../construct/ssm';
  */
 export class ConfigurationLayer extends ResourceAwareConstruct {
 
+    public readonly ssm: SSM;
+
     constructor(parent: Construct, name: string, props: IParameterAwareProps) {
         super(parent, name, props);
         if (props && props.getParameter('ssmParameters')) {
@@ -17,11 +19,11 @@ export class ConfigurationLayer extends ResourceAwareConstruct {
             const appName = props.getApplicationName()
             const baseName = '/' + appName.toLowerCase();
 
-            const ssm = new SSM(this, '', {});
+            this.ssm = new SSM(this, props.getApplicationName() + '-ssm', {});
 
             props.getParameter('ssmParameters').forEach((value: any, key: string) => {
 
-                const ssmParam = ssm.addParameter({
+                const ssmParam = this.ssm.addParameter({
                     id: 'SSMParameter' + appName + key,
                     name: baseName + '/' + key.toLowerCase(),
                     value: value

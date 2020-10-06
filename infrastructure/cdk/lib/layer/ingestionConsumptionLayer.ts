@@ -9,6 +9,8 @@ import { Table } from '@aws-cdk/aws-dynamodb';
 import Lambda = require('@aws-cdk/aws-lambda');
 
 import { KinesisStreamFirehoseS3 } from '../construct/kinesis-stream-firehose-s3';
+import { ApiSsmConfig } from '../construct/api-ssm-config';
+import { SSM } from './../construct/ssm'
 
 export class IngestionConsumptionLayer extends ResourceAwareConstruct {
 
@@ -39,7 +41,7 @@ export class IngestionConsumptionLayer extends ResourceAwareConstruct {
     }
 
     createKinesis(props: IParameterAwareProps) {
-        this.kinesis = new KinesisStreamFirehoseS3(this, "stream-firehose-s3", {
+        this.kinesis = new KinesisStreamFirehoseS3(this, props.getApplicationName() + "stream-firehose-s3", {
             applicationName: props.getApplicationName(),
             kinesisStreamsLambda: <Lambda.Function> props.getParameter('lambda.scoreboard'),
             accountId: props.accountId,
@@ -356,142 +358,14 @@ export class IngestionConsumptionLayer extends ResourceAwareConstruct {
           ]
       });
 
-        /**
-         * CONFIG 
-         * Resource: /config
-         * Method: GET 
-         * Request Parameters : none
-         * Response format:
-            {
-            "Parameters": [
-                {
-                "Name": "/<app>/clientid",
-                "Value": "4tfe5l26kdp59tc4k4v0b688nm"
-                },
-                {
-                "Name": "/<app>/identitypoolid",
-                "Value": "<region>:17092df6-7e3a-4893-4d85-c6de33cdfabc"
-                },
-                {
-                "Name": "/<app>>/userpoolid",
-                "Value": "<region>_ueLfdaSXi"
-                },
-                {
-                "Name": "/<app>>/userpoolurl",
-                "Value": "cognito-idp.<region>>.amazonaws.com/<region>_ueLfdaSXi"
-                }
-            ]
-            }
-         */
-        let config = new APIGTW.CfnResource(this, props.getApplicationName() + "APIv1config", {
-            parentId: v1.ref
-            , pathPart: 'config'
-            , restApiId: this.api.ref
-        });
-
-        // GET
-        let configGetMethod = new APIGTW.CfnMethod(this, props.getApplicationName() + "APIv1configGET", {
-            restApiId: this.api.ref
-            , resourceId: config.ref
-            , authorizationType: APIGTW.AuthorizationType.NONE
-            , httpMethod: 'GET'
-            , requestParameters: {
-                'method.request.header.Content-Type': true
-                , 'method.request.header.X-Amz-Target': true
-            }
-            , requestModels: {
-                'application/json': apiModelGetParametersRequest.ref
-            }
-            , integration: {
-                integrationHttpMethod: 'POST'
-                , type: 'AWS'
-                , uri: 'arn:aws:apigateway:' + props.region + ':ssm:path//'
-                , credentials: apirole.roleArn
-                , requestParameters: {
-                    'integration.request.header.Content-Type': "'application/x-amz-json-1.1'"
-                    , 'integration.request.header.X-Amz-Target': "'AmazonSSM.GetParameters'"
-                }
-                , requestTemplates: {
-                    'application/json': '{"Names" : [' +
-                        '"/' + props.getApplicationName().toLowerCase() + '/userpoolid",' +
-                        '"/' + props.getApplicationName().toLowerCase() + '/userpoolurl",' +
-                        '"/' + props.getApplicationName().toLowerCase() + '/clientid",' +
-                        '"/' + props.getApplicationName().toLowerCase() + '/identitypoolid"' +
-                        ']}'
-                }
-                , passthroughBehavior: 'WHEN_NO_TEMPLATES'
-                , integrationResponses: [
-                    {
-                        statusCode: '200'
-                        , responseParameters: {
-                            'method.response.header.Access-Control-Allow-Origin': "'*'"
-                        }
-                        , responseTemplates: {
-                            'application/json': `
-                                #set($inputRoot = $input.path('$'))
-                                {
-                                    "Parameters" : [
-                                        #foreach($elem in $inputRoot.Parameters)
-                                        {
-                                            "Name" : "$elem.Name",
-                                            "Value" :  "$util.escapeJavaScript("$elem.Value").replaceAll("'",'"')"
-                                        } 
-                                        #if($foreach.hasNext),#end
-                                    #end
-                                ]
-                                }`
-                        }
-                    }]
-            }
-            , methodResponses: [
-                {
-                    statusCode: '200'
-                    , responseParameters: {
-                        'method.response.header.Access-Control-Allow-Origin': true
-                    }
-                    , responseModels: {
-                        'application/json': 'Empty'
-                    }
-                }
-            ]
-        });
-
-
-        // OPTIONS
-        let configOptionsMethod = new APIGTW.CfnMethod(this, props.getApplicationName() + "APIv1configOPTIONS", {
-            restApiId: this.api.ref
-            , resourceId: config.ref
-            , authorizationType: APIGTW.AuthorizationType.NONE
-            , httpMethod: 'OPTIONS'
-            , integration: {
-                passthroughBehavior: 'when_no_match'
-                , type: 'MOCK'
-                , requestTemplates: {
-                    'application/json': `{\"statusCode\": 200}`
-                }
-                , integrationResponses: [
-                    {
-                        statusCode: '200'
-                        , responseParameters: {
-                            'method.response.header.Access-Control-Allow-Origin': "'*'"
-                            , 'method.response.header.Access-Control-Allow-Methods': "'*'"
-                            , 'method.response.header.Access-Control-Allow-Headers': "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
-                        }
-                    }]
-            }
-            , methodResponses: [
-                {
-                    statusCode: '200'
-                    , responseParameters: {
-                        'method.response.header.Access-Control-Allow-Origin': true
-                        , 'method.response.header.Access-Control-Allow-Methods': true
-                        , 'method.response.header.Access-Control-Allow-Headers': true
-                    }
-                    , responseModels: {
-                        'application/json': 'Empty'
-                    }
-                }
-            ]
+        // TODO: Rename id to use appplication name?
+        const configApis = new ApiSsmConfig(this, props.getApplicationName() + "-api-ssm-config", {
+            applicationName: props.getApplicationName(),
+            parentVersion: v1,
+            api: this.api,
+            region: props.region,
+            apirole: apirole,
+            ssm: props.getParameter('ssm')
         });
 
         /**
@@ -899,8 +773,8 @@ export class IngestionConsumptionLayer extends ResourceAwareConstruct {
         deployment.addDependsOn(sessionOptionsMethod);
         deployment.addDependsOn(websocketGetMethod);
         deployment.addDependsOn(websocketOptionsMethod);
-        deployment.addDependsOn(configGetMethod);
-        deployment.addDependsOn(configOptionsMethod);
+        deployment.addDependsOn(configApis.configGetMethod);
+        deployment.addDependsOn(configApis.configOptionsMethod);
         deployment.addDependsOn(allocatePostMethod);
         deployment.addDependsOn(allocateOptionsMethod);
         deployment.addDependsOn(deallocatePostMethod);

@@ -22,6 +22,10 @@ export class SSM extends cdk.Construct {
         super(scope, id);
     }
 
+    public listParameters(): string[] {
+        return this.ssmParameters.map(p => p.parameterName);
+    }
+
     public addParameter(param: StringParam): ssm.StringParameter {
         const ssmParam: ssm.StringParameter = this.createParameter(param);
         this.ssmParameters.push(ssmParam);
